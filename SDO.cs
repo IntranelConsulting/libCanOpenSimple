@@ -241,7 +241,7 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="cp">SDO Canpacket to process</param>
         /// <returns>true if the SDO is finished</returns>
-        public bool SDOProcessPacket(canpacket cp, List<SDO> activeSDOs)
+        public bool SDOProcess(canpacket cp, List<SDO> activeSDOs)
         {
 
             int SCS = cp.data[0] >> 5; //7-5
@@ -511,6 +511,5 @@ namespace libCanopenSimple
                 return (T)(object)GetDataAsUInt32();
             throw new ArgumentException("Unsupported type");
         }
-
     }
 }

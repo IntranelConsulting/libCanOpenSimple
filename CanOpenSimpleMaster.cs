@@ -144,7 +144,8 @@ namespace libCanopenSimple
                 throw new Exception("Driver already open - must be closed before reopening");
             }
 
-            driver = DriverLoader.LoadDriver(drivername);
+            DriverLoader dl = new DriverLoader();
+            driver = dl.LoadDriver(drivername);
 
             if (driver.open(comport, speed) == false)
                 return false;
@@ -183,7 +184,8 @@ namespace libCanopenSimple
             //on a hot plug event we have lost the handle and we will never close the port
             if (!drivers.ContainsKey(drivername))
             {
-                driver = DriverLoader.LoadDriver(drivername);
+                DriverLoader dl = new DriverLoader();
+                driver = dl.LoadDriver(drivername);
                 drivers.Add(drivername, driver);
             }
 
@@ -360,7 +362,7 @@ namespace libCanopenSimple
 
                         if (SDOcallbacks.TryGetValue(cp.cob, out toProcess))
                         {
-                            if (toProcess.SDOProcessPacket(cp, activeSDOList))
+                            if (toProcess.SDOProcess(cp, activeSDOList))
                             {
                                 SDOcallbacks.TryRemove(cp.cob, out _);
                             }

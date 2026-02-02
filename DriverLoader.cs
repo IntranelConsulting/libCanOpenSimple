@@ -31,7 +31,7 @@ namespace libCanopenSimple
     /// by gordonmleigh
     /// </summary>
 
-    public static class DriverLoader
+    public class DriverLoader
     {
         public static bool IsRunningOnMono()
         {
@@ -43,14 +43,15 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="fileName"> Name of the dynamic library to load, note do not append .dll or .so. Use 'SocketCan' to load SocketCan driver</param>
         /// <returns></returns>
-        public static IDriverInstance LoadDriver(string fileName)
+        public IDriverInstance LoadDriver(string fileName)
         {
 
 
             if (IsRunningOnMono())
             {
                 fileName += ".so";
-                return DriverLoaderMono.LoadDriver(fileName);
+                DriverLoaderMono dl = new DriverLoaderMono();
+                return dl.LoadDriver(fileName);
             }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && fileName == "SocketCan")
             {
@@ -60,7 +61,8 @@ namespace libCanopenSimple
             {
 
                 fileName += ".dll";
-                return DriverLoaderWin.LoadDriver(fileName);
+                DriverLoaderWin dl = new DriverLoaderWin();
+                return dl.LoadDriver(fileName);
             }
 
         }
@@ -74,7 +76,7 @@ namespace libCanopenSimple
     /// for eash C# access
     /// </summary>
 
-    public static class DriverLoaderWin
+    public class DriverLoaderWin
     {
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr LoadLibrary(string libname);
@@ -85,9 +87,21 @@ namespace libCanopenSimple
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
-        private static IntPtr Handle = IntPtr.Zero;
+        private IntPtr Handle = IntPtr.Zero;
 
-        private static DriverInstanceCanFestival driver;
+        private DriverInstanceCanFestival driver;
+
+        /// <summary>
+        /// Clean up and free the library
+        /// </summary>
+        ~DriverLoaderWin()
+        {
+            if (Handle != IntPtr.Zero)
+            {
+                FreeLibrary(Handle);
+                Handle = IntPtr.Zero;
+            }
+        }
 
         /// <summary>
         /// Attempt to load the requested can festival driver and return a DriverInstance class
@@ -96,7 +110,7 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="fileName">Load can festival driver (Windows .Net runtime version) .dll must be appeneded in this case to fileName</param>
         /// <returns></returns>
-        public static DriverInstanceCanFestival LoadDriver(string fileName)
+        public DriverInstanceCanFestival LoadDriver(string fileName)
         {
             // Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
             // If you need to load and unload multiple times then you will need to add a FreeLibrary() call
@@ -150,7 +164,7 @@ namespace libCanopenSimple
     /// you will need to keep track of the handles and free them when done.
     /// </summary>
     /// 
-    public static class DriverLoaderMono
+    public class DriverLoaderMono
     {
 
         [DllImport("libdl.so")]
@@ -159,9 +173,9 @@ namespace libCanopenSimple
         [DllImport("libdl.so")]
         static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-        private static IntPtr Handle = IntPtr.Zero;
+        private IntPtr Handle = IntPtr.Zero;
 
-        private static DriverInstanceCanFestival driver;
+        private DriverInstanceCanFestival driver;
 
         const int RTLD_NOW = 2; // for dlopen's flags 
 
@@ -170,7 +184,7 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="fileName">Load can festival driver (Mono runtime version) .so must be appeneded in this case to fileName</param>
         /// <returns></returns>
-        public static DriverInstanceCanFestival LoadDriver(string fileName)
+        public DriverInstanceCanFestival LoadDriver(string fileName)
         {
             // Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
             // If you need to load and unload multiple times then you will need to add a FreeLibrary() call
@@ -429,11 +443,11 @@ namespace libCanopenSimple
 
             System.Threading.Thread.Sleep(100);
 
-            if (rxthread != null)
-                while (rxthread.ThreadState == System.Threading.ThreadState.Running)
-                {
-                    System.Threading.Thread.Sleep(1);
-                }
+            if(rxthread!=null)
+            while (rxthread.ThreadState == System.Threading.ThreadState.Running)
+            {
+                System.Threading.Thread.Sleep(1);
+            }
 
             if (instancehandle != IntPtr.Zero)
                 canClose(instancehandle);
