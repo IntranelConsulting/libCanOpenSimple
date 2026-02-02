@@ -1,57 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
-    <OutputType>Library</OutputType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Platforms>AnyCPU;x86;x64</Platforms>
+    <RootNamespace>libCanopenSimple</RootNamespace>
+    <AssemblyName>libCanopenSimple</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <Configurations>Debug;Release;DebugSocketCAN</Configurations>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugSocketCAN|AnyCPU'">
-    <OutputPath>bin\DebugSocketCAN\</OutputPath>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <OutputPath>bin\x86\Debug\</OutputPath>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>bin\x86\Release\</OutputPath>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <OutputPath>bin\x64\Debug\</OutputPath>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\x64\Release\</OutputPath>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
+    <PropertyGroup>
+      <DefaultItemExcludes>$(DefaultItemExcludes);libCanOpenSimpleCLI\**</DefaultItemExcludes>
+      <DefaultItemExcludes>$(DefaultItemExcludes);SimpleTest\**</DefaultItemExcludes>
+        <DefaultItemExcludes>$(DefaultItemExcludes);DriverTest\**</DefaultItemExcludes>
+        <DefaultItemExcludes>$(DefaultItemExcludes);canfestivaldrivers\**</DefaultItemExcludes>
+    </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="canfestivaldrivers\**" />
-    <Compile Remove="DriverTest\**" />
-    <Compile Remove="libCanOpenSimpleCLI\**" />
-    <Compile Remove="SimpleTest\**" />
-    <Compile Remove="SocketCANSharp\**" />
-    <EmbeddedResource Remove="canfestivaldrivers\**" />
-    <EmbeddedResource Remove="DriverTest\**" />
-    <EmbeddedResource Remove="libCanOpenSimpleCLI\**" />
-    <EmbeddedResource Remove="SimpleTest\**" />
-    <EmbeddedResource Remove="SocketCANSharp\**" />
-    <None Remove="canfestivaldrivers\**" />
-    <None Remove="DriverTest\**" />
-    <None Remove="libCanOpenSimpleCLI\**" />
-    <None Remove="SimpleTest\**" />
-    <None Remove="SocketCANSharp\**" />
+    <PackageReference Include="SocketCANSharp" Version="0.13.0" />
   </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Properties\" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="SocketCANSharp\src\SocketCANSharp\SocketCANSharp.csproj" />
-  </ItemGroup>
-  <PropertyGroup />
-  <PropertyGroup />
 </Project>

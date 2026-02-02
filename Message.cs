@@ -18,7 +18,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
 	/// <summary>
 	/// CanFestival message packet. Note we set data to be a UInt64 as inside canfestival its a fixed char[8] array

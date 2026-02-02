@@ -15,12 +15,12 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
-using System.Collections.Concurrent;
-using static libCanOpenSimple.SDO;
+using static libCanopenSimple.SDO;
 
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
 	public enum BUSSPEED
     {
@@ -33,6 +33,71 @@ namespace libCanOpenSimple
         BUS_500Kbit,
         BUS_800Kbit,
         BUS_1Mbit,
+    }
+
+    /// <summary>
+    /// C# representation of a CanPacket, containing the COB the length and the data. RTR is not supported
+    /// as it's pretty much not used on CanOpen, but this could be added later if necessary
+    /// </summary>
+    public class canpacket
+    {
+        public UInt16 cob;
+        public byte len;
+        public byte[] data;
+        public bool bridge = false;
+
+        public canpacket()
+        {
+        }
+
+        /// <summary>
+        /// Construct C# Canpacket from a CanFestival message
+        /// </summary>
+        /// <param name="msg">A CanFestival message struct</param>
+        public canpacket(Message msg, bool bridge = false)
+        {
+            cob = msg.cob_id;
+            len = msg.len;
+            data = new byte[len];
+            this.bridge = bridge;
+
+            byte[] temp = BitConverter.GetBytes(msg.data);
+            Array.Copy(temp, data, msg.len);
+        }
+
+        /// <summary>
+        /// Convert to a CanFestival message
+        /// </summary>
+        /// <returns>CanFestival message</returns>
+        public Message ToMsg()
+        {
+            Message msg = new Message();
+            msg.cob_id = cob;
+            msg.len = len;
+            msg.rtr = 0;
+
+            byte[] temp = new byte[8];
+            Array.Copy(data, temp, len);
+            msg.data = BitConverter.ToUInt64(temp, 0);
+
+            return msg;
+
+        }
+
+        /// <summary>
+        /// Dump current packet to string
+        /// </summary>
+        /// <returns>Formatted string of current packet</returns>
+        public override string ToString()
+        {
+            string output = string.Format("{0:x3} {1:x1}", cob, len);
+
+            for (int x = 0; x < len; x++)
+            {
+                output += string.Format(" {0:x2}", data[x]);
+            }
+            return output;
+        }
     }
 
     /// <summary>
@@ -57,7 +122,7 @@ namespace libCanOpenSimple
 		public NMTState GetNMTStateForNode	(ushort node)
 		{
 			//Lazy create the NMT state for the node
-			return NMTStateStore.GetOrAdd(node, (node) => new NMTState());
+			return NMTStateStore.GetOrAdd(node, (_) => new NMTState());
 		}
 
         private readonly ConcurrentQueue<SDO> sdo_queue = new ConcurrentQueue<SDO>();
@@ -145,7 +210,7 @@ namespace libCanOpenSimple
         /// Send a Can packet on the bus
         /// </summary>
         /// <param name="p"></param>
-        public void SendPacket(CanOpenPacket p, bool bridge=false)
+        public void SendPacket(canpacket p, bool bridge=false)
         {
             Message msg = p.ToMsg();
 
@@ -158,7 +223,7 @@ namespace libCanOpenSimple
         /// <param name="msg">CanOpen message recieved from the bus</param>
         private void Driver_rxmessage(Message msg,bool bridge=false)
         {
-            packetqueue.Enqueue(new CanOpenPacket(msg,bridge));
+            packetqueue.Enqueue(new canpacket(msg,bridge));
 			WorkAvailable.Set();
         }
 
@@ -185,38 +250,38 @@ namespace libCanOpenSimple
 
         ConcurrentDictionary<ushort, Action<byte[]>> PDOcallbacks = new ConcurrentDictionary<ushort, Action<byte[]>>();
 		ConcurrentDictionary<ushort, SDO> SDOcallbacks = new ConcurrentDictionary<ushort, SDO>();
-        ConcurrentQueue<CanOpenPacket> packetqueue = new ConcurrentQueue<CanOpenPacket>();
+        ConcurrentQueue<canpacket> packetqueue = new ConcurrentQueue<canpacket>();
 		List<SDO> activeSDOList = new List<SDO>();
 
 
 		public delegate void ConnectionEvent(object sender, EventArgs e);
         public event ConnectionEvent connectionevent;
 
-        public delegate void PacketEvent(CanOpenPacket p, DateTime dt);
+        public delegate void PacketEvent(canpacket p, DateTime dt);
         public event PacketEvent packetevent;
 
-        public delegate void SDOEvent(CanOpenPacket p, DateTime dt);
+        public delegate void SDOEvent(canpacket p, DateTime dt);
         public event SDOEvent sdoevent;
 
-        public delegate void NMTEvent(CanOpenPacket p, DateTime dt);
+        public delegate void NMTEvent(canpacket p, DateTime dt);
         public event NMTEvent nmtevent;
 
-        public delegate void NMTECEvent(CanOpenPacket p, DateTime dt);
+        public delegate void NMTECEvent(canpacket p, DateTime dt);
         public event NMTECEvent nmtecevent;
 
-        public delegate void PDOEvent(CanOpenPacket[] p,DateTime dt);
+        public delegate void PDOEvent(canpacket[] p,DateTime dt);
         public event PDOEvent pdoevent;
 
-        public delegate void EMCYEvent(CanOpenPacket p, DateTime dt);
+        public delegate void EMCYEvent(canpacket p, DateTime dt);
         public event EMCYEvent emcyevent;
 
-        public delegate void LSSEvent(CanOpenPacket p, DateTime dt);
+        public delegate void LSSEvent(canpacket p, DateTime dt);
         public event LSSEvent lssevent;
 
-        public delegate void TIMEEvent(CanOpenPacket p, DateTime dt);
+        public delegate void TIMEEvent(canpacket p, DateTime dt);
         public event TIMEEvent timeevent;
 
-        public delegate void SYNCEvent(CanOpenPacket p, DateTime dt);
+        public delegate void SYNCEvent(canpacket p, DateTime dt);
         public event SYNCEvent syncevent;
 
         volatile bool threadrun = true;
@@ -241,8 +306,8 @@ namespace libCanOpenSimple
         {
             while (threadrun)
             {
-                CanOpenPacket cp;
-                List<CanOpenPacket> pdos = new List<CanOpenPacket>();
+                canpacket cp;
+                List<canpacket> pdos = new List<canpacket>();
 
 				// pdos.count can never be anything other than zero here
                 //while (threadrun && packetqueue.IsEmpty && pdos.Count==0 && sdo_queue.IsEmpty && activeSDOList.Count == 0)
@@ -413,7 +478,7 @@ namespace libCanOpenSimple
 			foreach (SDO s in tokill)
 			{
 				activeSDOList.Remove(s);
-				SDOcallbacks.Remove((UInt16)(s.node + 0x580), out _);
+				SDOcallbacks.TryRemove((UInt16)(s.node + 0x580), out _);
 			}
 		}
 
@@ -569,7 +634,7 @@ namespace libCanOpenSimple
         /// <returns>SDO class that is used to perform the packet handshake, contains error/status codes</returns>
         public SDO SDOwrite(byte node, UInt16 index, byte subindex, byte[] data, Action<SDO> completedcallback)
         {
-			SDO sdo = new SDO(this, node, index, subindex, SDO.Direction.SDO_WRITE, completedcallback, data);
+			SDO sdo = new SDO(this, node, index, subindex, SDO.direction.SDO_WRITE, completedcallback, data);
             sdo_queue.Enqueue(sdo);
 
 			WorkAvailable.Set();
@@ -586,7 +651,7 @@ namespace libCanOpenSimple
 		/// <returns>SDO class that is used to perform the packet handshake, contains returned data and error/status codes</returns>
 		public SDO SDOread(byte node, UInt16 index, byte subindex, Action<SDO> completedcallback)
         {
-			SDO sdo = new SDO(this, node, index, subindex, SDO.Direction.SDO_READ, completedcallback, null);
+			SDO sdo = new SDO(this, node, index, subindex, SDO.direction.SDO_READ, completedcallback, null);
             sdo_queue.Enqueue(sdo);
 
 			WorkAvailable.Set();
@@ -608,7 +673,7 @@ namespace libCanOpenSimple
 
         public void NMT_start(byte nodeid = 0)
         {
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = 000;
             p.len = 2;
             p.data = new byte[2];
@@ -619,7 +684,7 @@ namespace libCanOpenSimple
 
         public void NMT_preop(byte nodeid = 0)
         {
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = 000;
             p.len = 2;
             p.data = new byte[2];
@@ -630,7 +695,7 @@ namespace libCanOpenSimple
 
         public void NMT_stop(byte nodeid = 0)
         {
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = 000;
             p.len = 2;
             p.data = new byte[2];
@@ -645,7 +710,7 @@ namespace libCanOpenSimple
 			// (nodes do not seem to broadcast an NMT state change when being reset)
 			GetNMTStateForNode(nodeid).changestate(NMTState.e_NMTState.INVALID);
 
-			CanOpenPacket p = new CanOpenPacket();
+			canpacket p = new canpacket();
             p.cob = 000;
             p.len = 2;
             p.data = new byte[2];
@@ -657,7 +722,7 @@ namespace libCanOpenSimple
 
         public void NMT_ResetComms(byte nodeid = 0)
         {
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = 000;
             p.len = 2;
             p.data = new byte[2];
@@ -695,7 +760,7 @@ namespace libCanOpenSimple
 
         public void writePDO(UInt16 cob, byte[] payload)
         {
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = cob;
             p.len = (byte)payload.Length;
             p.data = new byte[p.len];

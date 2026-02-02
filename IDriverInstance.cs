@@ -15,16 +15,16 @@
 */
 
 
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
-	public interface IDriverInstance
+    /// <summary>
+    /// CANOpen message recieved callback, this will be fired upon any recieved complete message on the bus
+    /// </summary>
+    /// <param name="msg">The CanOpen message</param>
+    public delegate void RxMessage(Message msg, bool bridge = false);
+    
+    public interface IDriverInstance
 	{
-		/// <summary>
-		/// CANOpen message recieved callback, this will be fired upon any recieved complete message on the bus
-		/// </summary>
-		/// <param name="msg">The CanOpen message</param>
-		public delegate void RxMessage(Message msg, bool bridge = false);
-
 		event RxMessage rxmessage;
 
 		Message canreceive();

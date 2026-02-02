@@ -23,7 +23,7 @@ using System.Text;
 
 //using static libCanOpenSimple.IDriverInstance;
 
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
 	/// <summary>
 	/// DriverInstace represents a specific instance of a loaded canfestival driver
@@ -36,7 +36,7 @@ namespace libCanOpenSimple
 		private bool threadrun = true;
 		System.Threading.Thread rxthread;
 
-		public event IDriverInstance.RxMessage rxmessage;
+		public event RxMessage rxmessage;
 
 		/// <summary>
 		/// This contains the bus name on which the can board is connected and the bit rate of the board

@@ -17,7 +17,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
     /// <summary>
     /// The SDO class encapusulates an SDO transfer and its associated data
@@ -28,7 +28,7 @@ namespace libCanOpenSimple
         /// <summary>
         /// Direction of the SDO transfer
         /// </summary>
-        public enum Direction
+        public enum direction
         {
             SDO_READ = 0,
             SDO_WRITE = 1,
@@ -44,7 +44,7 @@ namespace libCanOpenSimple
             SDO_HANDSHAKE,
             SDO_FINISHED,
             SDO_ERROR,
-			SDO_TIMEOUT
+            SDO_TIMEOUT
         }
 
         public readonly byte node;
@@ -53,8 +53,8 @@ namespace libCanOpenSimple
         //should see if that is really needed or if better accessors are required
         //may be readonly access etc.
         public byte[] databuffer = null;
-		public byte[] replydatabuffer = null;
-		public SDO_STATE state;
+        public byte[] replydatabuffer = null;
+        public SDO_STATE state;
         public UInt16 index;
         public byte subindex;
         public UInt32 expitideddata;
@@ -65,7 +65,7 @@ namespace libCanOpenSimple
         private Action<SDO> completedcallback;
       
       
-        private Direction dir;
+        private direction dir;
       
         private UInt32 totaldata;
         private CanOpenSimpleMaster can;
@@ -83,7 +83,7 @@ namespace libCanOpenSimple
         /// <param name="dir">Direction of transfer</param>
         /// <param name="completedcallback">Optional, completed callback (or null if not required)</param>
         /// <param name="databuffer">A byte array of data to be transfered to or from if more than 4 bytes</param>
-        public SDO(CanOpenSimpleMaster can, byte node, UInt16 index, byte subindex, Direction dir, Action<SDO> completedcallback, byte[] databuffer)
+        public SDO(CanOpenSimpleMaster can, byte node, UInt16 index, byte subindex, direction dir, Action<SDO> completedcallback, byte[] databuffer)
         {
             this.can = can;
             this.index = index;
@@ -120,14 +120,14 @@ namespace libCanOpenSimple
                 timeout = DateTime.Now + TimeSpan.FromMilliseconds(CanOpenSimpleMaster.DefaultTimeoutms);
                 state = SDO_STATE.SDO_SENT;
 
-                if (dir == Direction.SDO_READ)
+                if (dir == direction.SDO_READ)
                 {
                     byte cmd = 0x40;
                     byte[] payload = new byte[4];
                     sendpacket(cmd, payload);
                 }
 
-                if (dir == Direction.SDO_WRITE)
+                if (dir == direction.SDO_WRITE)
                 {
                     bool wpsent = false;
                     byte cmd = 0;
@@ -183,7 +183,7 @@ namespace libCanOpenSimple
         private void sendpacket(byte cmd, byte[] payload)
         {
 
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = (UInt16)(0x600 + node);
             p.len = 8;
             p.data = new byte[8];
@@ -203,10 +203,10 @@ namespace libCanOpenSimple
             }
 
    //         if (dbglevel == debuglevel.DEBUG_ALL)
-			//{
+            //{
    //             Console.WriteLine(String.Format("Sending a new SDO packet: {0}", p.ToString()));
-				
-			//}
+                
+            //}
 
             if(can.isopen())
                 can.SendPacket(p);
@@ -219,7 +219,7 @@ namespace libCanOpenSimple
         /// <param name="payload">Data payload</param>
         private void sendpacketsegment(byte cmd, byte[] payload)
         {
-            CanOpenPacket p = new CanOpenPacket();
+            canpacket p = new canpacket();
             p.cob = (UInt16)(0x600 + node);
             p.len = 8;
             p.data = new byte[8];
@@ -241,7 +241,7 @@ namespace libCanOpenSimple
         /// </summary>
         /// <param name="cp">SDO Canpacket to process</param>
         /// <returns>true if the SDO is finished</returns>
-        public bool SDOProcessPacket(CanOpenPacket cp, List<SDO> activeSDOs)
+        public bool SDOProcessPacket(canpacket cp, List<SDO> activeSDOs)
         {
 
             int SCS = cp.data[0] >> 5; //7-5
@@ -367,12 +367,12 @@ namespace libCanOpenSimple
             //Segments toggle on
             else if (SCS == 0x00)
             {
-				//segmented transfer
-				UInt32 scount = (UInt32)(7 - sn);
+                //segmented transfer
+                UInt32 scount = (UInt32)(7 - sn);
 
-				// Console.WriteLine("RX Segmented transfer update length is {0} -- {1}", scount, totaldata);
+                // Console.WriteLine("RX Segmented transfer update length is {0} -- {1}", scount, totaldata);
 
-				for (int x = 0; x < scount; x++)
+                for (int x = 0; x < scount; x++)
                 {
                     if ((totaldata + x) < databuffer.Length)
                         databuffer[totaldata + x] = cp.data[1 + x];
@@ -405,7 +405,7 @@ namespace libCanOpenSimple
 
             timeout = DateTime.Now + TimeSpan.FromMilliseconds(CanOpenSimpleMaster.DefaultTimeoutms);
 
-			if (dir == Direction.SDO_READ)
+            if (dir == direction.SDO_READ)
             {
                 byte cmd = 0x60;
                 if (toggle)
@@ -454,63 +454,63 @@ namespace libCanOpenSimple
 
         }
 
-		public byte GetDataAsByte() => databuffer[0];
-		public sbyte GetDataAsSByte() => (sbyte)databuffer[0];
-		public Int16 GetDataAsInt16() => databuffer == null ? (Int16)0 : BitConverter.ToInt16(databuffer, 0);
-		public UInt16 GetDataAsUInt16() => databuffer == null ? (UInt16)0 : BitConverter.ToUInt16(databuffer, 0);
-		public Int32 GetDataAsInt32() => databuffer == null ? (Int32)0 : BitConverter.ToInt32(databuffer, 0);
-		public UInt32 GetDataAsUInt32() => databuffer == null ? (UInt32)0 : BitConverter.ToUInt32(databuffer, 0);
-		public String GetDataAsString() => databuffer == null ? string.Empty : System.Text.Encoding.UTF8.GetString(databuffer);
+        public byte GetDataAsByte() => databuffer[0];
+        public sbyte GetDataAsSByte() => (sbyte)databuffer[0];
+        public Int16 GetDataAsInt16() => databuffer == null ? (Int16)0 : BitConverter.ToInt16(databuffer, 0);
+        public UInt16 GetDataAsUInt16() => databuffer == null ? (UInt16)0 : BitConverter.ToUInt16(databuffer, 0);
+        public Int32 GetDataAsInt32() => databuffer == null ? (Int32)0 : BitConverter.ToInt32(databuffer, 0);
+        public UInt32 GetDataAsUInt32() => databuffer == null ? (UInt32)0 : BitConverter.ToUInt32(databuffer, 0);
+        public String GetDataAsString() => databuffer == null ? string.Empty : System.Text.Encoding.UTF8.GetString(databuffer);
 
-		public string GetDataAsString(Type typeOfData)
-		{
-			Type type = typeOfData;
+        public string GetDataAsString(Type typeOfData)
+        {
+            Type type = typeOfData;
 
-			if (typeOfData.IsEnum)
-			{
-				type = Enum.GetUnderlyingType(typeOfData);
-			}
+            if (typeOfData.IsEnum)
+            {
+                type = Enum.GetUnderlyingType(typeOfData);
+            }
 
-			if (type == typeof(byte))
-				return GetDataAsByte().ToString();
-			else if (type == typeof(sbyte))
-				return GetDataAsSByte().ToString();
-			else if (type == typeof(Int16))
-				return GetDataAsInt16().ToString();
-			else if (type == typeof(UInt16))
-				return GetDataAsUInt16().ToString();
-			else if (type == typeof(Int32))
-				return GetDataAsInt32().ToString();
-			else if (type == typeof(UInt32))
-				return GetDataAsUInt32().ToString();
-			else if (type == typeof(string))
-				return GetDataAsString();
-			throw new ArgumentException($"Unsupported type: {type.Name}");
+            if (type == typeof(byte))
+                return GetDataAsByte().ToString();
+            else if (type == typeof(sbyte))
+                return GetDataAsSByte().ToString();
+            else if (type == typeof(Int16))
+                return GetDataAsInt16().ToString();
+            else if (type == typeof(UInt16))
+                return GetDataAsUInt16().ToString();
+            else if (type == typeof(Int32))
+                return GetDataAsInt32().ToString();
+            else if (type == typeof(UInt32))
+                return GetDataAsUInt32().ToString();
+            else if (type == typeof(string))
+                return GetDataAsString();
+            throw new ArgumentException($"Unsupported type: {type.Name}");
 
-		}
+        }
 
-		public T GetData<T>() where T : struct
-		{
-			var type = typeof(T);
-			if (type.IsEnum)
-			{
-				type = Enum.GetUnderlyingType(type);
-			}
+        public T GetData<T>() where T : struct
+        {
+            var type = typeof(T);
+            if (type.IsEnum)
+            {
+                type = Enum.GetUnderlyingType(type);
+            }
 
-			if (type == typeof(byte))
-				return (T)(object)GetDataAsByte() ;
-			else if (type == typeof(sbyte))
-				return (T)(object)GetDataAsSByte();
-			else if (type == typeof(Int16))
-				return (T)(object)GetDataAsInt16();
-			else if (type == typeof(UInt16))
-				return (T)(object)GetDataAsUInt16();
-			else if (type == typeof(Int32))
-				return (T)(object)GetDataAsInt32();
-			else if (type == typeof(UInt32))
-				return (T)(object)GetDataAsUInt32();
-			throw new ArgumentException("Unsupported type");
-		}
+            if (type == typeof(byte))
+                return (T)(object)GetDataAsByte() ;
+            else if (type == typeof(sbyte))
+                return (T)(object)GetDataAsSByte();
+            else if (type == typeof(Int16))
+                return (T)(object)GetDataAsInt16();
+            else if (type == typeof(UInt16))
+                return (T)(object)GetDataAsUInt16();
+            else if (type == typeof(Int32))
+                return (T)(object)GetDataAsInt32();
+            else if (type == typeof(UInt32))
+                return (T)(object)GetDataAsUInt32();
+            throw new ArgumentException("Unsupported type");
+        }
 
-	}
+    }
 }

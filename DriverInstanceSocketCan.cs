@@ -5,9 +5,7 @@ using System.Threading;
 using SocketCANSharp;
 using SocketCANSharp.Network;
 
-using static libCanOpenSimple.IDriverInstance;
-
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
     class DriverInstanceSocketCan : IDriverInstance
 	{
@@ -25,7 +23,7 @@ namespace libCanOpenSimple
 			if(bytesRead > 0)
 			{ 
 				msg.cob_id = (ushort)canFrame.CanId;
-				msg.data = BitConverter.ToUInt64(canFrame.Data);
+				msg.data = BitConverter.ToUInt64(canFrame.Data, 0);
 				msg.len = canFrame.Length;
 			}
 			else

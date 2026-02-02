@@ -18,7 +18,7 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace libCanOpenSimple
+namespace libCanopenSimple
 {
 	/// <summary> DriverLoader - dynamic pinvoke can festival drivers
 	/// This class will select the approprate win or mono loader and try to load the requested 
