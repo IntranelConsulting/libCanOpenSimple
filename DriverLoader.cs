@@ -168,10 +168,10 @@ namespace libCanopenSimple
     {
 
         [DllImport("libdl.so")]
-        static extern IntPtr dlopen(string filename, int flags);
+        protected static extern IntPtr dlopen(string filename, int flags);
 
         [DllImport("libdl.so")]
-        static extern IntPtr dlsym(IntPtr handle, string symbol);
+        protected static extern IntPtr dlsym(IntPtr handle, string symbol);
 
         private IntPtr Handle = IntPtr.Zero;
 
