@@ -276,7 +276,7 @@ namespace libCanopenSimple
             }
 
             //Write complete
-            else if (SCS == 0x03)
+            if (SCS == 0x03)
             {
 
                 UInt16 index = (UInt16)(cp.data[1] + (cp.data[2] << 8));
@@ -311,7 +311,7 @@ namespace libCanopenSimple
             }
 
             //Write segment complete
-            else if (SCS == 0x01)
+            if (SCS == 0x01)
             {
                 if (totaldata < expitideddata)
                 {
@@ -328,7 +328,7 @@ namespace libCanopenSimple
             }
 
             //if expedited just handle the data
-            else if (SCS == 0x02 && e == 1)
+            if (SCS == 0x02 && e == 1)
             {
                 //Expidited and length are set so its a regular short transfer
 
@@ -349,7 +349,7 @@ namespace libCanopenSimple
                 return true;
             }
 
-            else if (SCS == 0x02)
+            if (SCS == 0x02)
             {
                 UInt32 count = (UInt32)(cp.data[4] + (cp.data[5] << 8) + (cp.data[6] << 16) + (cp.data[7] << 24));
 

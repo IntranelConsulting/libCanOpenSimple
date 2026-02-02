@@ -51,7 +51,7 @@ namespace libCanopenSimple
             {
                 fileName += ".so";
                 DriverLoaderMono dl = new DriverLoaderMono();
-                return dl.LoadDriver(fileName);
+                return dl.loaddriver(fileName);
             }
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && fileName == "SocketCan")
             {
@@ -62,7 +62,7 @@ namespace libCanopenSimple
 
                 fileName += ".dll";
                 DriverLoaderWin dl = new DriverLoaderWin();
-                return dl.LoadDriver(fileName);
+                return dl.loaddriver(fileName);
             }
 
         }
@@ -110,7 +110,7 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="fileName">Load can festival driver (Windows .Net runtime version) .dll must be appeneded in this case to fileName</param>
         /// <returns></returns>
-        public DriverInstanceCanFestival LoadDriver(string fileName)
+        public DriverInstanceCanFestival loaddriver(string fileName)
         {
             // Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
             // If you need to load and unload multiple times then you will need to add a FreeLibrary() call
@@ -184,7 +184,7 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="fileName">Load can festival driver (Mono runtime version) .so must be appeneded in this case to fileName</param>
         /// <returns></returns>
-        public DriverInstanceCanFestival LoadDriver(string fileName)
+        public DriverInstanceCanFestival loaddriver(string fileName)
         {
             // Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
             // If you need to load and unload multiple times then you will need to add a FreeLibrary() call
