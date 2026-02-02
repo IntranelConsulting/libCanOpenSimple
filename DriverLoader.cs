@@ -16,197 +16,502 @@
 
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace libCanopenSimple
 {
-	/// <summary> DriverLoader - dynamic pinvoke can festival drivers
-	/// This class will select the approprate win or mono loader and try to load the requested 
-	/// can festival library
-	/// Info on pinvoke for win/mono :-
-	/// http://stackoverflow.com/questions/13461989/p-invoke-to-dynamically-loaded-library-on-mono
-	/// by gordonmleigh
-	/// </summary>
+    /// <summary> DriverLoader - dynamic pinvoke can festival drivers
+    /// This class will select the approprate win or mono loader and try to load the requested 
+    /// can festival library
+    /// Info on pinvoke for win/mono :-
+    /// http://stackoverflow.com/questions/13461989/p-invoke-to-dynamically-loaded-library-on-mono
+    /// by gordonmleigh
+    /// </summary>
 
-	public static class DriverLoader
-	{
-		public static bool IsRunningOnMono()
-		{
-			return Type.GetType("Mono.Runtime") != null;
-		}
+    public static class DriverLoader
+    {
+        public static bool IsRunningOnMono()
+        {
+            return Type.GetType("Mono.Runtime") != null;
+        }
 
-		/// <summary>
-		/// Attempt to load the requested can festival driver or SocketCan and return a DriverInstance class
-		/// </summary>
-		/// <param name="fileName"> Name of the dynamic library to load, note do not append .dll or .so. Use 'SocketCan' to load SocketCan driver</param>
-		/// <returns></returns>
-		public static IDriverInstance LoadDriver(string fileName)
-		{
+        /// <summary>
+        /// Attempt to load the requested can festival driver or SocketCan and return a DriverInstance class
+        /// </summary>
+        /// <param name="fileName"> Name of the dynamic library to load, note do not append .dll or .so. Use 'SocketCan' to load SocketCan driver</param>
+        /// <returns></returns>
+        public static IDriverInstance LoadDriver(string fileName)
+        {
 
 
-			if (IsRunningOnMono())
-			{
-				fileName += ".so";
-				return DriverLoaderMono.LoadDriver(fileName);
-			}
-			if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && fileName == "SocketCan")
-			{
-				return new DriverInstanceSocketCan();
-			}
-			else
-			{
+            if (IsRunningOnMono())
+            {
+                fileName += ".so";
+                return DriverLoaderMono.LoadDriver(fileName);
+            }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && fileName == "SocketCan")
+            {
+                return new DriverInstanceSocketCan();
+            }
+            else
+            {
 
-				fileName += ".dll";
-				return DriverLoaderWin.LoadDriver(fileName);
-			}
+                fileName += ".dll";
+                return DriverLoaderWin.LoadDriver(fileName);
+            }
 
-		}
-	}
+        }
+    }
 
-	#region windows
+    #region windows
 
-	/// <summary>
-	/// CanFestival driver loader for windows, this class will load kernel32 then attept to use LoadLibrary()
-	/// and GetProcAddress() to hook the can festival driver functions these are then exposed as delagates
-	/// for eash C# access
-	/// </summary>
+    /// <summary>
+    /// CanFestival driver loader for windows, this class will load kernel32 then attept to use LoadLibrary()
+    /// and GetProcAddress() to hook the can festival driver functions these are then exposed as delagates
+    /// for eash C# access
+    /// </summary>
 
-	public static class DriverLoaderWin
-	{
-		[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-		private static extern IntPtr LoadLibrary(string libname);
+    public static class DriverLoaderWin
+    {
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr LoadLibrary(string libname);
 
-		[DllImport("kernel32.dll", CharSet = CharSet.Auto)]
-		private static extern bool FreeLibrary(IntPtr hModule);
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+        private static extern bool FreeLibrary(IntPtr hModule);
 
-		[DllImport("kernel32.dll", CharSet = CharSet.Ansi)]
-		private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
-		private static IntPtr Handle = IntPtr.Zero;
+        private static IntPtr Handle = IntPtr.Zero;
 
-		private static DriverInstanceCanFestival driver;
+        private static DriverInstanceCanFestival driver;
 
-		/// <summary>
-		/// Attempt to load the requested can festival driver and return a DriverInstance class
-		/// Only one CanFestival driver can be loaded in the app. If you need to load multiple drivers
-		/// you will need to keep track of the handles and free them when done.
-		/// </summary>
-		/// <param name="fileName">Load can festival driver (Windows .Net runtime version) .dll must be appeneded in this case to fileName</param>
-		/// <returns></returns>
-		public static DriverInstanceCanFestival LoadDriver(string fileName)
-		{
-			// Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
-			// If you need to load and unload multiple times then you will need to add a FreeLibrary() call
-			if(Handle == IntPtr.Zero)
-			{
-				Handle = LoadLibrary(fileName);
-			}
+        /// <summary>
+        /// Attempt to load the requested can festival driver and return a DriverInstance class
+        /// Only one CanFestival driver can be loaded in the app. If you need to load multiple drivers
+        /// you will need to keep track of the handles and free them when done.
+        /// </summary>
+        /// <param name="fileName">Load can festival driver (Windows .Net runtime version) .dll must be appeneded in this case to fileName</param>
+        /// <returns></returns>
+        public static DriverInstanceCanFestival LoadDriver(string fileName)
+        {
+            // Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
+            // If you need to load and unload multiple times then you will need to add a FreeLibrary() call
+            if(Handle == IntPtr.Zero)
+            {
+                Handle = LoadLibrary(fileName);
+            }
 
-			if (Handle == IntPtr.Zero)
-			{
-				int errorCode = Marshal.GetLastWin32Error();
-				throw new Exception(string.Format("Failed to load library (ErrorCode: {0})", errorCode));
-			}
+            if (Handle == IntPtr.Zero)
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                throw new Exception(string.Format("Failed to load library (ErrorCode: {0})", errorCode));
+            }
 
-			IntPtr funcaddr;
+            IntPtr funcaddr;
 
-			funcaddr = GetProcAddress(Handle, "canReceive_driver");
-			DriverInstanceCanFestival.canReceive_T canReceive = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canReceive_T)) as DriverInstanceCanFestival.canReceive_T;
+            funcaddr = GetProcAddress(Handle, "canReceive_driver");
+            DriverInstanceCanFestival.canReceive_T canReceive = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canReceive_T)) as DriverInstanceCanFestival.canReceive_T;
 
-			funcaddr = GetProcAddress(Handle, "canSend_driver");
-			DriverInstanceCanFestival.canSend_T canSend = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canSend_T)) as DriverInstanceCanFestival.canSend_T; ;
+            funcaddr = GetProcAddress(Handle, "canSend_driver");
+            DriverInstanceCanFestival.canSend_T canSend = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canSend_T)) as DriverInstanceCanFestival.canSend_T; ;
 
-			funcaddr = GetProcAddress(Handle, "canOpen_driver");
-			DriverInstanceCanFestival.canOpen_T canOpen = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canOpen_T)) as DriverInstanceCanFestival.canOpen_T; ;
+            funcaddr = GetProcAddress(Handle, "canOpen_driver");
+            DriverInstanceCanFestival.canOpen_T canOpen = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canOpen_T)) as DriverInstanceCanFestival.canOpen_T; ;
 
-			funcaddr = GetProcAddress(Handle, "canClose_driver");
-			DriverInstanceCanFestival.canClose_T canClose = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canClose_T)) as DriverInstanceCanFestival.canClose_T; ;
+            funcaddr = GetProcAddress(Handle, "canClose_driver");
+            DriverInstanceCanFestival.canClose_T canClose = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canClose_T)) as DriverInstanceCanFestival.canClose_T; ;
 
-			funcaddr = GetProcAddress(Handle, "canChangeBaudRate_driver");
-			DriverInstanceCanFestival.canChangeBaudRate_T canChangeBaudRate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canChangeBaudRate_T)) as DriverInstanceCanFestival.canChangeBaudRate_T; ;
+            funcaddr = GetProcAddress(Handle, "canChangeBaudRate_driver");
+            DriverInstanceCanFestival.canChangeBaudRate_T canChangeBaudRate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canChangeBaudRate_T)) as DriverInstanceCanFestival.canChangeBaudRate_T; ;
 
-			funcaddr = GetProcAddress(Handle, "canEnumerate2_driver");
-			DriverInstanceCanFestival.canEnumerate_T canEnumerate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canEnumerate_T)) as DriverInstanceCanFestival.canEnumerate_T; ;
+            funcaddr = GetProcAddress(Handle, "canEnumerate2_driver");
+            DriverInstanceCanFestival.canEnumerate_T canEnumerate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canEnumerate_T)) as DriverInstanceCanFestival.canEnumerate_T; ;
 
-			driver = new DriverInstanceCanFestival(canReceive, canSend, canOpen, canClose, canChangeBaudRate, canEnumerate);
+            driver = new DriverInstanceCanFestival(canReceive, canSend, canOpen, canClose, canChangeBaudRate, canEnumerate);
 
-			return driver;
-		}
+            return driver;
+        }
 
-	}
-	#endregion
+    }
+    #endregion
 
-	#region mono
+    #region mono
 
-	/// <summary>
-	/// CanFestival driver loader for mono, this class will load libdl then attempt to use dlopen() and dlsym()
-	/// and GetProcAddress to hook the can festival driver functions these are then exposed as delagates
-	/// for each C# access
-	/// 
-	/// Only one CanFestival driver can be loaded in the app. If you need to load multiple drivers
-	/// you will need to keep track of the handles and free them when done.
-	/// </summary>
-	/// 
-	public static class DriverLoaderMono
-	{
+    /// <summary>
+    /// CanFestival driver loader for mono, this class will load libdl then attempt to use dlopen() and dlsym()
+    /// and GetProcAddress to hook the can festival driver functions these are then exposed as delagates
+    /// for each C# access
+    /// 
+    /// Only one CanFestival driver can be loaded in the app. If you need to load multiple drivers
+    /// you will need to keep track of the handles and free them when done.
+    /// </summary>
+    /// 
+    public static class DriverLoaderMono
+    {
 
-		[DllImport("libdl.so")]
-		static extern IntPtr dlopen(string filename, int flags);
+        [DllImport("libdl.so")]
+        static extern IntPtr dlopen(string filename, int flags);
 
-		[DllImport("libdl.so")]
-		static extern IntPtr dlsym(IntPtr handle, string symbol);
+        [DllImport("libdl.so")]
+        static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-		private static IntPtr Handle = IntPtr.Zero;
+        private static IntPtr Handle = IntPtr.Zero;
 
-		private static DriverInstanceCanFestival driver;
+        private static DriverInstanceCanFestival driver;
 
-		const int RTLD_NOW = 2; // for dlopen's flags 
+        const int RTLD_NOW = 2; // for dlopen's flags 
 
-		/// <summary>
-		/// Attempt to load the requested can festival driver and return a DriverInstance class
-		/// </summary>
-		/// <param name="fileName">Load can festival driver (Mono runtime version) .so must be appeneded in this case to fileName</param>
-		/// <returns></returns>
-		public static DriverInstanceCanFestival LoadDriver(string fileName)
-		{
-			// Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
-			// If you need to load and unload multiple times then you will need to add a FreeLibrary() call
-			if (Handle == IntPtr.Zero)
-			{
-				Handle = dlopen(fileName, RTLD_NOW);
-			}
-			
-			if (Handle == IntPtr.Zero)
-			{
-				int errorCode = Marshal.GetLastWin32Error();
-				throw new Exception(string.Format("Failed to load library (ErrorCode: {0})", errorCode));
-			}
+        /// <summary>
+        /// Attempt to load the requested can festival driver and return a DriverInstance class
+        /// </summary>
+        /// <param name="fileName">Load can festival driver (Mono runtime version) .so must be appeneded in this case to fileName</param>
+        /// <returns></returns>
+        public static DriverInstanceCanFestival LoadDriver(string fileName)
+        {
+            // Load the library just once. Not bothering to free it. as it will get unloaded when the app closes.
+            // If you need to load and unload multiple times then you will need to add a FreeLibrary() call
+            if (Handle == IntPtr.Zero)
+            {
+                Handle = dlopen(fileName, RTLD_NOW);
+            }
+            
+            if (Handle == IntPtr.Zero)
+            {
+                int errorCode = Marshal.GetLastWin32Error();
+                throw new Exception(string.Format("Failed to load library (ErrorCode: {0})", errorCode));
+            }
 
-			IntPtr funcaddr;
+            IntPtr funcaddr;
 
-			funcaddr = dlsym(Handle, "canReceive_driver");
-			DriverInstanceCanFestival.canReceive_T canReceive = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canReceive_T)) as DriverInstanceCanFestival.canReceive_T;
+            funcaddr = dlsym(Handle, "canReceive_driver");
+            DriverInstanceCanFestival.canReceive_T canReceive = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canReceive_T)) as DriverInstanceCanFestival.canReceive_T;
 
-			funcaddr = dlsym(Handle, "canSend_driver");
-			DriverInstanceCanFestival.canSend_T canSend = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canSend_T)) as DriverInstanceCanFestival.canSend_T; ;
+            funcaddr = dlsym(Handle, "canSend_driver");
+            DriverInstanceCanFestival.canSend_T canSend = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canSend_T)) as DriverInstanceCanFestival.canSend_T; ;
 
-			funcaddr = dlsym(Handle, "canOpen_driver");
-			DriverInstanceCanFestival.canOpen_T canOpen = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canOpen_T)) as DriverInstanceCanFestival.canOpen_T; ;
+            funcaddr = dlsym(Handle, "canOpen_driver");
+            DriverInstanceCanFestival.canOpen_T canOpen = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canOpen_T)) as DriverInstanceCanFestival.canOpen_T; ;
 
-			funcaddr = dlsym(Handle, "canClose_driver");
-			DriverInstanceCanFestival.canClose_T canClose = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canClose_T)) as DriverInstanceCanFestival.canClose_T; ;
+            funcaddr = dlsym(Handle, "canClose_driver");
+            DriverInstanceCanFestival.canClose_T canClose = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canClose_T)) as DriverInstanceCanFestival.canClose_T; ;
 
-			funcaddr = dlsym(Handle, "canChangeBaudRate_driver");
-			DriverInstanceCanFestival.canChangeBaudRate_T canChangeBaudRate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canChangeBaudRate_T)) as DriverInstanceCanFestival.canChangeBaudRate_T; ;
+            funcaddr = dlsym(Handle, "canChangeBaudRate_driver");
+            DriverInstanceCanFestival.canChangeBaudRate_T canChangeBaudRate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canChangeBaudRate_T)) as DriverInstanceCanFestival.canChangeBaudRate_T; ;
 
-			funcaddr = dlsym(Handle, "canEnumerate_driver");
-			DriverInstanceCanFestival.canEnumerate_T canEnumerate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canEnumerate_T)) as DriverInstanceCanFestival.canEnumerate_T; ;
+            funcaddr = dlsym(Handle, "canEnumerate_driver");
+            DriverInstanceCanFestival.canEnumerate_T canEnumerate = Marshal.GetDelegateForFunctionPointer(funcaddr, typeof(DriverInstanceCanFestival.canEnumerate_T)) as DriverInstanceCanFestival.canEnumerate_T; ;
 
-			driver = new DriverInstanceCanFestival(canReceive, canSend, canOpen, canClose, canChangeBaudRate, canEnumerate);
+            driver = new DriverInstanceCanFestival(canReceive, canSend, canOpen, canClose, canChangeBaudRate, canEnumerate);
 
-			return driver;
-		}
-	}
+            return driver;
+        }
+    }
 
-#endregion
+    #endregion
+
+    /// <summary>
+    /// DriverInstace represents a specific instance of a loaded canfestival driver
+    /// </summary>
+    /// 
+
+    public class DriverInstanceCanFestival : IDriverInstance
+    {
+
+        private bool threadrun = true;
+        System.Threading.Thread rxthread;
+
+        public event RxMessage rxmessage;
+
+        /// <summary>
+        /// This contains the bus name on which the can board is connected and the bit rate of the board
+        /// </summary>
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct struct_s_BOARD
+        {
+
+            [MarshalAs(UnmanagedType.LPStr)]
+            public String busname;  /**< The bus name on which the CAN board is connected */
+
+            [MarshalAs(UnmanagedType.LPStr)]
+            public String baudrate; /**< The board baudrate */
+        };
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct struct_s_DEVICES
+        {
+            public UInt32 id;
+
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string name;
+        };
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct UnmanagedStruct
+        {
+            [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPStr, SizeConst = 100)]
+            public IntPtr[] listOfStrings;
+
+            public IEnumerable<string> Strings
+            {
+                get
+                {
+                    return listOfStrings.Select(x => Marshal.PtrToStringAnsi(x));
+                }
+            }
+        }
+
+        public delegate byte canReceive_T(IntPtr handle, IntPtr msg);
+        private canReceive_T canReceive;
+
+        public delegate byte canSend_T(IntPtr handle, IntPtr msg);
+        private canSend_T canSend;
+
+        public delegate IntPtr canOpen_T(IntPtr brd);
+        private canOpen_T canOpen;
+
+        public delegate UInt32 canClose_T(IntPtr handle);
+        private canClose_T canClose;
+
+        public delegate byte canChangeBaudRate_T(IntPtr handle, string rate);
+        private canChangeBaudRate_T canChangeBaudrate;
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void canEnumerateDelegate_T(
+        [MarshalAs(UnmanagedType.LPArray, ArraySubType = UnmanagedType.LPStr, SizeParamIndex = 1)]
+        string[] values,
+        int valueCount);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void canEnumerate_T(canEnumerateDelegate_T callback);
+        private canEnumerate_T canEnumerate;
+
+        private IntPtr instancehandle = IntPtr.Zero;
+        IntPtr brdptr;
+
+        struct_s_BOARD brd;
+
+        /// <summary>
+        /// Create a new DriverInstance, this class provides a wrapper between the C# world and the C API dlls from canfestival that
+        /// provide access to the CAN hardware devices. The exposed delegates represent the 5 defined entry points that all can festival
+        /// drivers expose to form the common driver interface API. Usualy the DriverLoader class will directly call this constructor.
+        /// </summary>
+        /// <param name="canReceive">pInvoked delegate for canReceive function</param>
+        /// <param name="canSend">pInvoked delegate for canSend function</param>
+        /// <param name="canOpen">pInvoked delegate for canOpen function</param>
+        /// <param name="canClose">pInvoked delegate for canClose function</param>
+        /// <param name="canChangeBaudrate">pInvoked delegate for canChangeBaudrate functipn</param>
+        public DriverInstanceCanFestival(canReceive_T canReceive, canSend_T canSend, canOpen_T canOpen, canClose_T canClose, canChangeBaudRate_T canChangeBaudrate, canEnumerate_T canEnumerate)
+        {
+            this.canReceive = canReceive;
+            this.canSend = canSend;
+            this.canOpen = canOpen;
+            this.canClose = canClose;
+            this.canChangeBaudrate = canChangeBaudrate;
+            this.canEnumerate = canEnumerate;
+
+
+            StringBuilder[] b = new StringBuilder[2];
+
+            instancehandle = IntPtr.Zero;
+            brdptr = IntPtr.Zero;
+
+        }
+
+        public static List<string> ports = new List<string>();
+
+        public static void PrintReceivedData(string[] values, int valueCount)
+        {
+            foreach (var item in values)
+                ports.Add(item);
+        }
+
+
+        public void enumerate()
+        {
+            ports = new List<string>();
+            this.canEnumerate(PrintReceivedData);
+        }
+
+        /// <summary>
+        /// Open the CAN device, the bus ID and bit rate are passed to driver. For Serial/USb Seral pass COMx etc.
+        /// </summary>
+        /// <param name="bus">The requested bus ID are provided here.</param>
+        /// <param name="speed">The requested CAN bit rate</param>
+        /// <returns>True on succesful opening of device</returns>
+        public bool open(string bus, BUSSPEED speed)
+        {
+
+            try
+            {
+
+
+                brd.busname = bus;
+
+                // Map BUSSPEED to CanFestival speed options
+                switch (speed)
+                {
+                    case BUSSPEED.BUS_10Kbit:
+                        brd.baudrate = "10K";
+                        break;
+                    case BUSSPEED.BUS_20Kbit:
+                        brd.baudrate = "20K";
+                        break;
+                    case BUSSPEED.BUS_50Kbit:
+                        brd.baudrate = "50K";
+                        break;
+                    case BUSSPEED.BUS_100Kbit:
+                        brd.baudrate = "100K";
+                        break;
+                    case BUSSPEED.BUS_125Kbit:
+                        brd.baudrate = "125K";
+                        break;
+                    case BUSSPEED.BUS_250Kbit:
+                        brd.baudrate = "250K";
+                        break;
+                    case BUSSPEED.BUS_500Kbit:
+                        brd.baudrate = "500K";
+                        break;
+                    case BUSSPEED.BUS_1Mbit:
+                        brd.baudrate = "1M";
+                        break;
+
+                }
+
+                brdptr = Marshal.AllocHGlobal(Marshal.SizeOf(brd));
+                Marshal.StructureToPtr(brd, brdptr, false);
+
+                instancehandle = canOpen(brdptr);
+
+                if (instancehandle != IntPtr.Zero)
+                {
+
+                    rxthread = new System.Threading.Thread(rxthreadworker);
+                    rxthread.Start();
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// See if the CAN device is open
+        /// </summary>
+        /// <returns>Open status of can device</returns>
+        public bool isOpen()
+        {
+            if (instancehandle == IntPtr.Zero)
+                return false;
+
+
+            return true;
+        }
+
+        /// <summary>
+        /// Close the CAN hardware device
+        /// </summary>
+        public void close()
+        {
+            threadrun = false;
+
+            System.Threading.Thread.Sleep(100);
+
+            if (rxthread != null)
+                while (rxthread.ThreadState == System.Threading.ThreadState.Running)
+                {
+                    System.Threading.Thread.Sleep(1);
+                }
+
+            if (instancehandle != IntPtr.Zero)
+                canClose(instancehandle);
+
+            instancehandle = IntPtr.Zero;
+
+            if (brdptr != IntPtr.Zero)
+                Marshal.FreeHGlobal(brdptr);
+
+            brdptr = IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// Message pump function. This should be called in a fast loop
+        /// </summary>
+        /// <returns></returns>
+        public Message canreceive()
+        {
+
+            // I think we can do better here and not allocated/deallocate to heap every pump loop
+            Message msg = new Message();
+
+            IntPtr msgptr = Marshal.AllocHGlobal(Marshal.SizeOf(msg));
+            Marshal.StructureToPtr(msg, msgptr, false);
+
+            byte status = canReceive(instancehandle, msgptr);
+
+            msg = (Message)Marshal.PtrToStructure(msgptr, typeof(Message));
+
+            Marshal.FreeHGlobal(msgptr);
+
+            return msg;
+
+        }
+
+        /// <summary>
+        /// Send a CanOpen mesasge to the hardware device
+        /// </summary>
+        /// <param name="msg">CanOpen message to be sent</param>
+        public void cansend(Message msg)
+        {
+
+
+            IntPtr msgptr = Marshal.AllocHGlobal(Marshal.SizeOf(msg));
+            Marshal.StructureToPtr(msg, msgptr, false);
+
+            if (instancehandle != IntPtr.Zero)
+                canSend(instancehandle, msgptr);
+
+            Marshal.FreeHGlobal(msgptr);
+
+        }
+
+        /// <summary>
+        /// Private worker thread to keep the rxmessage() function pumped
+        /// </summary>
+        private void rxthreadworker()
+        {
+            try
+            {
+                while (threadrun)
+                {
+
+                    Message rxmsg = canreceive();
+
+                    if (rxmsg.len != 0)
+                    {
+                        if (rxmessage != null)
+                            rxmessage(rxmsg);
+                    }
+
+                    //System.Threading.Thread.Sleep(0);
+                }
+            }
+            catch
+            {
+
+            }
+        }
+    }
 }

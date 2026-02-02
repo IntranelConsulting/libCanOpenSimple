@@ -22,7 +22,7 @@ using static libCanopenSimple.SDO;
 
 namespace libCanopenSimple
 {
-	public enum BUSSPEED
+    public enum BUSSPEED
     {
         BUS_10Kbit = 0,
         BUS_20Kbit,
@@ -108,22 +108,22 @@ namespace libCanopenSimple
     /// </summary>
     public class CanOpenSimpleMaster
     {
-		public const int DefaultTimeoutms = 3000;
+        public const int DefaultTimeoutms = 3000;
 
-		IDriverInstance driver;
+        IDriverInstance driver;
 
-		// This allows the worker thread to wait for work to do rather than busy waiting
-		// In a high performance system with a heavily loaded CAN bus it may be beneficial
-		// to switch to ManualResetEventSlim, which would have a lower latency for going from
-		// idle to working.
-		private AutoResetEvent WorkAvailable = new AutoResetEvent(false);
+        // This allows the worker thread to wait for work to do rather than busy waiting
+        // In a high performance system with a heavily loaded CAN bus it may be beneficial
+        // to switch to ManualResetEventSlim, which would have a lower latency for going from
+        // idle to working.
+        private AutoResetEvent WorkAvailable = new AutoResetEvent(false);
 
-		private readonly ConcurrentDictionary<UInt16, NMTState> NMTStateStore = new ConcurrentDictionary<ushort, NMTState>();
-		public NMTState GetNMTStateForNode	(ushort node)
-		{
-			//Lazy create the NMT state for the node
-			return NMTStateStore.GetOrAdd(node, (_) => new NMTState());
-		}
+        private readonly ConcurrentDictionary<UInt16, NMTState> NMTStateStore = new ConcurrentDictionary<ushort, NMTState>();
+        public NMTState GetNMTStateForNode	(ushort node)
+        {
+            //Lazy create the NMT state for the node
+            return NMTStateStore.GetOrAdd(node, (_) => new NMTState());
+        }
 
         private readonly ConcurrentQueue<SDO> sdo_queue = new ConcurrentQueue<SDO>();
 
@@ -139,10 +139,10 @@ namespace libCanopenSimple
         /// <param name="drivername">Driver to use</param>
         public bool open(string comport, BUSSPEED speed, string drivername)
         {
-			if (driver != null)
-			{
-				throw new Exception("Driver already open - must be closed before reopening");
-			}
+            if (driver != null)
+            {
+                throw new Exception("Driver already open - must be closed before reopening");
+            }
 
             driver = DriverLoader.LoadDriver(drivername);
 
@@ -165,15 +165,15 @@ namespace libCanopenSimple
         public Dictionary<string, List<string>> ports = new Dictionary<string, List<string>>();
         public Dictionary<string, IDriverInstance> drivers = new Dictionary<string, IDriverInstance>();
 
-		/// <summary>
-		/// Will not work for SocketCan drivers
-		/// </summary>
+        /// <summary>
+        /// Will not work for SocketCan drivers
+        /// </summary>
         public void enumerate(string drivername)
         {
-			if (drivername == "SocketCan")
-			{
-				throw new Exception("SocketCan Driver does not support enumeration");
-			}
+            if (drivername == "SocketCan")
+            {
+                throw new Exception("SocketCan Driver does not support enumeration");
+            }
 
             if (!ports.ContainsKey(drivername))
                 ports.Add(drivername, new List<string>());
@@ -224,7 +224,7 @@ namespace libCanopenSimple
         private void Driver_rxmessage(Message msg,bool bridge=false)
         {
             packetqueue.Enqueue(new canpacket(msg,bridge));
-			WorkAvailable.Set();
+            WorkAvailable.Set();
         }
 
 
@@ -235,26 +235,26 @@ namespace libCanopenSimple
         {
             threadrun = false;
 
-			// Run the worker thread so that it can see threadrun==false and exit;
-			WorkAvailable.Set();
+            // Run the worker thread so that it can see threadrun==false and exit;
+            WorkAvailable.Set();
 
-			if (driver == null)
+            if (driver == null)
                 return;
 
             driver.close();
-			driver = null;
+            driver = null;
             if (connectionevent != null) connectionevent(this, new ConnectionChangedEventArgs(false));
         }
 
         #endregion
 
         ConcurrentDictionary<ushort, Action<byte[]>> PDOcallbacks = new ConcurrentDictionary<ushort, Action<byte[]>>();
-		ConcurrentDictionary<ushort, SDO> SDOcallbacks = new ConcurrentDictionary<ushort, SDO>();
+        ConcurrentDictionary<ushort, SDO> SDOcallbacks = new ConcurrentDictionary<ushort, SDO>();
         ConcurrentQueue<canpacket> packetqueue = new ConcurrentQueue<canpacket>();
-		List<SDO> activeSDOList = new List<SDO>();
+        List<SDO> activeSDOList = new List<SDO>();
 
 
-		public delegate void ConnectionEvent(object sender, EventArgs e);
+        public delegate void ConnectionEvent(object sender, EventArgs e);
         public event ConnectionEvent connectionevent;
 
         public delegate void PacketEvent(canpacket p, DateTime dt);
@@ -309,27 +309,27 @@ namespace libCanopenSimple
                 canpacket cp;
                 List<canpacket> pdos = new List<canpacket>();
 
-				// pdos.count can never be anything other than zero here
+                // pdos.count can never be anything other than zero here
                 //while (threadrun && packetqueue.IsEmpty && pdos.Count==0 && sdo_queue.IsEmpty && activeSDOList.Count == 0)
                 //{
                 //    System.Threading.Thread.Sleep(0);
                 //}
 
-				// Stop here until there is work to do or we are shutting down
-				if(packetqueue.IsEmpty && sdo_queue.IsEmpty &&  activeSDOList.Count == 0 && threadrun)
-				{ 
-					WorkAvailable.WaitOne();
-				}
+                // Stop here until there is work to do or we are shutting down
+                if(packetqueue.IsEmpty && sdo_queue.IsEmpty &&  activeSDOList.Count == 0 && threadrun)
+                { 
+                    WorkAvailable.WaitOne();
+                }
 
-				// If we are shutting down then we will not process any more packets we just stop the thread. 
-				// If the devices on the bus would work better with a clean shut down then more code would be needed to stop 
-				// accepting any more SDO or PDO requests and wait for the current ones to finish before shutting down.
-				if (!threadrun)
-				{
-					break;
-				}
+                // If we are shutting down then we will not process any more packets we just stop the thread. 
+                // If the devices on the bus would work better with a clean shut down then more code would be needed to stop 
+                // accepting any more SDO or PDO requests and wait for the current ones to finish before shutting down.
+                if (!threadrun)
+                {
+                    break;
+                }
 
-				if (packetqueue.TryDequeue(out cp))
+                if (packetqueue.TryDequeue(out cp))
                 {
 
                     if (cp.bridge == false)
@@ -341,35 +341,35 @@ namespace libCanopenSimple
                     //PDO 0x180 -- 0x57F
                     if (cp.cob >= 0x180 && cp.cob <= 0x57F)
                     {
-						Action<byte[]> PDOcallback;
+                        Action<byte[]> PDOcallback;
 
                         if (PDOcallbacks.TryGetValue(cp.cob, out PDOcallback))
-						{
-							PDOcallback(cp.data);
-						}
+                        {
+                            PDOcallback(cp.data);
+                        }
 
                         pdos.Add(cp);
                     }
                     //SDO replies 0x601-0x67F
                     else if (cp.cob >= 0x580 && cp.cob < 0x600)
                     {
-						if (cp.len != 8)
+                        if (cp.len != 8)
                             return;
-						
-						SDO toProcess;
+                        
+                        SDO toProcess;
 
-						if (SDOcallbacks.TryGetValue(cp.cob, out toProcess))
+                        if (SDOcallbacks.TryGetValue(cp.cob, out toProcess))
                         {
                             if (toProcess.SDOProcessPacket(cp, activeSDOList))
                             {
                                 SDOcallbacks.TryRemove(cp.cob, out _);
                             }
-						}
+                        }
 
-						if (sdoevent != null)
+                        if (sdoevent != null)
                             sdoevent(cp, DateTime.Now);
                     }
-					else if (cp.cob >= 0x600 && cp.cob < 0x680)
+                    else if (cp.cob >= 0x600 && cp.cob < 0x680)
                     {
                         if (sdoevent != null)
                             sdoevent(cp,DateTime.Now);
@@ -378,24 +378,24 @@ namespace libCanopenSimple
                     else if (cp.cob > 0x700 && cp.cob <= 0x77f)
                     {
                         byte node = (byte)(cp.cob & 0x07F);
-						var nmt = GetNMTStateForNode(node);
-						byte nmtmessage = cp.data[0];
+                        var nmt = GetNMTStateForNode(node);
+                        byte nmtmessage = cp.data[0];
 
-						// If we received the bootup message then we know we have gone to pre-operational
-						if (nmtmessage == 00)
-						{
-							nmt.changestate((NMTState.e_NMTState.PRE_OPERATIONAL));
-						}
-						else
-						{
-							nmt.changestate((NMTState.e_NMTState)nmtmessage);
-						}
+                        // If we received the bootup message then we know we have gone to pre-operational
+                        if (nmtmessage == 00)
+                        {
+                            nmt.changestate((NMTState.e_NMTState.PRE_OPERATIONAL));
+                        }
+                        else
+                        {
+                            nmt.changestate((NMTState.e_NMTState)nmtmessage);
+                        }
                         nmt.lastping = DateTime.Now;
 
-						if (nmtecevent != null)
+                        if (nmtecevent != null)
                             nmtecevent(cp, DateTime.Now);
                     }
-					else if (cp.cob == 000)
+                    else if (cp.cob == 000)
                     {
 
                         if (nmtevent != null)
@@ -431,70 +431,70 @@ namespace libCanopenSimple
                         pdoevent(pdos.ToArray(),DateTime.Now);
                 }
 
-				RunActiveSDOStateMachinesForSending();
-				
-				SDO sdoobj;
-				if (sdo_queue.TryPeek(out sdoobj))
-				{
+                RunActiveSDOStateMachinesForSending();
+                
+                SDO sdoobj;
+                if (sdo_queue.TryPeek(out sdoobj))
+                {
                     if (!SDOcallbacks.ContainsKey((UInt16)(sdoobj.node + 0x580)))
                     {
-						SDO dequeuedsdoobj;
+                        SDO dequeuedsdoobj;
                         if(sdo_queue.TryDequeue(out dequeuedsdoobj))
-						{
-							// A single thread is consuming the queue so this should never happen
-							// This should probably be an Assert rather than defensive programming
-							if (!Object.ReferenceEquals(dequeuedsdoobj, sdoobj))
-							{
-								throw new Exception("SDO queue has been consumed from some other thread!");
-							}
+                        {
+                            // A single thread is consuming the queue so this should never happen
+                            // This should probably be an Assert rather than defensive programming
+                            if (!Object.ReferenceEquals(dequeuedsdoobj, sdoobj))
+                            {
+                                throw new Exception("SDO queue has been consumed from some other thread!");
+                            }
 
-							if (!SDOcallbacks.TryAdd((UInt16)(sdoobj.node + 0x580), sdoobj))
-							{
-								throw new Exception("SDO callback already exists for this node - some other thread added one?"); 
-							}
-							activeSDOList.Add(sdoobj);
-						}
+                            if (!SDOcallbacks.TryAdd((UInt16)(sdoobj.node + 0x580), sdoobj))
+                            {
+                                throw new Exception("SDO callback already exists for this node - some other thread added one?"); 
+                            }
+                            activeSDOList.Add(sdoobj);
+                        }
                     }
                 }
-			}
-		}
+            }
+        }
 
-		/// <summary>
-		/// SDO pump, call this often
-		/// </summary>
-		private void RunActiveSDOStateMachinesForSending()
-		{
-			List<SDO> tokill = new List<SDO>();
+        /// <summary>
+        /// SDO pump, call this often
+        /// </summary>
+        private void RunActiveSDOStateMachinesForSending()
+        {
+            List<SDO> tokill = new List<SDO>();
 
-			foreach (SDO s in activeSDOList)
-			{
-				s.ProcessSDOStateMachineForSending();
-				if (s.state == SDO_STATE.SDO_FINISHED || s.state == SDO_STATE.SDO_ERROR || s.state == SDO_STATE.SDO_TIMEOUT)
-				{
-					tokill.Add(s);
-				}
-			}
+            foreach (SDO s in activeSDOList)
+            {
+                s.ProcessSDOStateMachineForSending();
+                if (s.state == SDO_STATE.SDO_FINISHED || s.state == SDO_STATE.SDO_ERROR || s.state == SDO_STATE.SDO_TIMEOUT)
+                {
+                    tokill.Add(s);
+                }
+            }
 
-			foreach (SDO s in tokill)
-			{
-				activeSDOList.Remove(s);
-				SDOcallbacks.TryRemove((UInt16)(s.node + 0x580), out _);
-			}
-		}
+            foreach (SDO s in tokill)
+            {
+                activeSDOList.Remove(s);
+                SDOcallbacks.TryRemove((UInt16)(s.node + 0x580), out _);
+            }
+        }
 
 
-		#region SDOHelpers
+        #region SDOHelpers
 
-		/// <summary>
-		/// Write to a node via SDO
-		/// </summary>
-		/// <param name="node">Node ID</param>
-		/// <param name="index">Object Dictionary Index</param>
-		/// <param name="subindex">Object Dictionary sub index</param>
-		/// <param name="udata">UInt32 data to send</param>
-		/// <param name="completedcallback">Call back on finished/error event</param>
-		/// <returns>SDO class that is used to perform the packet handshake, contains error/status codes</returns>
-		public SDO SDOwrite(byte node, UInt16 index, byte subindex, UInt32 udata, Action<SDO> completedcallback)
+        /// <summary>
+        /// Write to a node via SDO
+        /// </summary>
+        /// <param name="node">Node ID</param>
+        /// <param name="index">Object Dictionary Index</param>
+        /// <param name="subindex">Object Dictionary sub index</param>
+        /// <param name="udata">UInt32 data to send</param>
+        /// <param name="completedcallback">Call back on finished/error event</param>
+        /// <returns>SDO class that is used to perform the packet handshake, contains error/status codes</returns>
+        public SDO SDOwrite(byte node, UInt16 index, byte subindex, UInt32 udata, Action<SDO> completedcallback)
         {
             byte[] bytes = BitConverter.GetBytes(udata);
             return SDOwrite(node, index, subindex, bytes, completedcallback);
@@ -634,28 +634,28 @@ namespace libCanopenSimple
         /// <returns>SDO class that is used to perform the packet handshake, contains error/status codes</returns>
         public SDO SDOwrite(byte node, UInt16 index, byte subindex, byte[] data, Action<SDO> completedcallback)
         {
-			SDO sdo = new SDO(this, node, index, subindex, SDO.direction.SDO_WRITE, completedcallback, data);
+            SDO sdo = new SDO(this, node, index, subindex, SDO.direction.SDO_WRITE, completedcallback, data);
             sdo_queue.Enqueue(sdo);
 
-			WorkAvailable.Set();
+            WorkAvailable.Set();
             return sdo;
         }
 
-		/// <summary>
-		/// Read from a remote node via SDO
-		/// </summary>
-		/// <param name="node">Node ID to read from</param>
-		/// <param name="index">Object Dictionary Index</param>
-		/// <param name="subindex">Object Dictionary sub index</param>
-		/// <param name="completedcallback">Call back on finished/error event</param>
-		/// <returns>SDO class that is used to perform the packet handshake, contains returned data and error/status codes</returns>
-		public SDO SDOread(byte node, UInt16 index, byte subindex, Action<SDO> completedcallback)
+        /// <summary>
+        /// Read from a remote node via SDO
+        /// </summary>
+        /// <param name="node">Node ID to read from</param>
+        /// <param name="index">Object Dictionary Index</param>
+        /// <param name="subindex">Object Dictionary sub index</param>
+        /// <param name="completedcallback">Call back on finished/error event</param>
+        /// <returns>SDO class that is used to perform the packet handshake, contains returned data and error/status codes</returns>
+        public SDO SDOread(byte node, UInt16 index, byte subindex, Action<SDO> completedcallback)
         {
-			SDO sdo = new SDO(this, node, index, subindex, SDO.direction.SDO_READ, completedcallback, null);
+            SDO sdo = new SDO(this, node, index, subindex, SDO.direction.SDO_READ, completedcallback, null);
             sdo_queue.Enqueue(sdo);
 
-			WorkAvailable.Set();
-			return sdo;
+            WorkAvailable.Set();
+            return sdo;
         }
 
         /// <summary>
@@ -706,11 +706,11 @@ namespace libCanopenSimple
 
         public void NMT_ResetNode(byte nodeid = 0)
         {
-			// Reset NMt status object for this node
-			// (nodes do not seem to broadcast an NMT state change when being reset)
-			GetNMTStateForNode(nodeid).changestate(NMTState.e_NMTState.INVALID);
+            // Reset NMt status object for this node
+            // (nodes do not seem to broadcast an NMT state change when being reset)
+            GetNMTStateForNode(nodeid).changestate(NMTState.e_NMTState.INVALID);
 
-			canpacket p = new canpacket();
+            canpacket p = new canpacket();
             p.cob = 000;
             p.len = 2;
             p.data = new byte[2];
@@ -732,20 +732,20 @@ namespace libCanopenSimple
             SendPacket(p);
         }
 
-		/// <summary>
- 		/// Note that this is not thread safe and should be sued carefully
-		/// The worker thread may change the state of the node at any time
-		/// </summary>
-		public bool NMT_isNodeFound(byte node)
+        /// <summary>
+        /// Note that this is not thread safe and should be sued carefully
+        /// The worker thread may change the state of the node at any time
+        /// </summary>
+        public bool NMT_isNodeFound(byte node)
         {
             return GetNMTStateForNode(node).state != NMTState.e_NMTState.INVALID;
         }
 
 
-		/// <summary>
-		/// Check whether it is time to send a guard message?
-		/// Note that this is not thread safe and should be called from the worker thread
-		/// </summary>
+        /// <summary>
+        /// Check whether it is time to send a guard message?
+        /// Note that this is not thread safe and should be called from the worker thread
+        /// </summary>
         public bool checkguard(ushort node, TimeSpan maxspan)
         {
             if (DateTime.Now - GetNMTStateForNode(node).lastping > maxspan)
