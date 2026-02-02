@@ -365,7 +365,7 @@ namespace libCanopenSimple
             }
 
             //Segments toggle on
-            else if (SCS == 0x00)
+            if (SCS == 0x00)
             {
                 //segmented transfer
                 UInt32 scount = (UInt32)(7 - sn);

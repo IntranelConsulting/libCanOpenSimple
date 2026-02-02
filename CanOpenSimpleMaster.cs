@@ -145,7 +145,7 @@ namespace libCanopenSimple
             }
 
             DriverLoader dl = new DriverLoader();
-            driver = dl.LoadDriver(drivername);
+            driver = dl.loaddriver(drivername);
 
             if (driver.open(comport, speed) == false)
                 return false;
@@ -185,7 +185,7 @@ namespace libCanopenSimple
             if (!drivers.ContainsKey(drivername))
             {
                 DriverLoader dl = new DriverLoader();
-                driver = dl.LoadDriver(drivername);
+                driver = dl.loaddriver(drivername);
                 drivers.Add(drivername, driver);
             }
 

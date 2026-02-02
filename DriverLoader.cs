@@ -43,7 +43,7 @@ namespace libCanopenSimple
         /// </summary>
         /// <param name="fileName"> Name of the dynamic library to load, note do not append .dll or .so. Use 'SocketCan' to load SocketCan driver</param>
         /// <returns></returns>
-        public IDriverInstance LoadDriver(string fileName)
+        public IDriverInstance loaddriver(string fileName)
         {
 
 
